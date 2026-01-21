@@ -1,5 +1,5 @@
 <?php
-/* BankImport minimal Module for Dolibarr */
+/* BankImport Module for Dolibarr */
 
 include_once DOL_DOCUMENT_ROOT . '/core/modules/DolibarrModules.class.php';
 
@@ -15,7 +15,10 @@ class modBankImport extends DolibarrModules
         global $langs, $conf;
         $this->db = $db;
 
-        $this->version = BankImportHelper::getEnv('VERSION', '0.0.10');
+        // Load translations
+        $langs->load("bankimport@bankimport");
+
+        $this->version = '0.0.10';
 
         // Unique ID (custom modules > 100000)
         $this->numero = 104001;
@@ -25,7 +28,8 @@ class modBankImport extends DolibarrModules
         // Where the module shows up in Setup
         $this->family = "financial";
         $this->name = "BankImport";
-        $this->description = "Import von Kontoauszügen";
+        // Use translation instead of hardcoded German text
+        $this->description = $langs->trans("BANKIMPORT_Setup_Description");
         $this->const_name = 'MAIN_MODULE_BANKIMPORT';
         $this->license = 'MIT';
         $this->special = 0;
@@ -36,8 +40,7 @@ class modBankImport extends DolibarrModules
         // Default module options
         $this->module_parts = array();
         $this->dirs = array();
-        //$this->config_page_url = array('setup.php@bankimport');
-        $this->config_page_url = array();
+        $this->config_page_url = array('setup.php@bankimport');
         $this->depends = array();
         $this->requiredby = array();
         $this->phpmin = array(7, 4);
@@ -46,9 +49,9 @@ class modBankImport extends DolibarrModules
         // --- Permissions definition ---
         $r = 0;
         $this->rights[$r][0] = $this->numero + $r;
-        $this->rights[$r][1] = 'Bankauszüge importieren';
-        $this->rights[$r][2] = 'w';
-        $this->rights[$r][3] = 0;
+        // Use translation for permission description
+        $this->rights[$r][1] = $langs->trans('BANKIMPORT_Permission_Import');
+        $this->rights[$r][3] = 1;
         $this->rights[$r][4] = 'import';
         $r++;
 
@@ -57,14 +60,15 @@ class modBankImport extends DolibarrModules
         $this->menu[$r++] = array(
             'fk_menu'   => 'fk_mainmenu=bank',
             'type'      => 'left',
-            'titre'     => 'Kontoauszüge importieren',
+            // Use translation for menu title
+            'titre'     => $langs->trans('BANKIMPORT_Menu_Title'),
             'mainmenu'  => 'bank',
             'leftmenu'  => 'bankimport',
             'url'       => '/custom/bankimport/import.php',
             'langs'     => 'bankimport@bankimport',
             'position'  => 100,
             'enabled'   => '1',
-            'perms'     => '$user->hasRight("banque", "modifier")',
+            'perms'     => '1',
             'target'    => '',
             'user'      => 0
         );

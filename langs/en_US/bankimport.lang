@@ -44,3 +44,6 @@ BANKIMPORT_Setup_Help_Usage=Usage
 BANKIMPORT_Setup_Help_Usage_Details=1. Go to Bank → Import bank statements<br>2. Select a bank account<br>3. Upload a CSV file<br>4. Choose the encoding<br>5. Click Import
 BANKIMPORT_Choose_file=Please select a CSV file!
 BANKIMPORT_Invalid_account=The selected bank account does not exist!
+
+BANKIMPORT_Permission_Import=Import bank statements
+BANKIMPORT_Menu_Title=Import bank statements

@@ -44,3 +44,6 @@ BANKIMPORT_Setup_Help_Usage=Verwendung
 BANKIMPORT_Setup_Help_Usage_Details=1. Gehen Sie zu Bank → Kontoauszüge importieren<br>2. Wählen Sie ein Bankkonto aus<br>3. Laden Sie eine CSV-Datei hoch<br>4. Wählen Sie die Kodierung<br>5. Klicken Sie auf Importieren
 BANKIMPORT_Choose_file=Bitte wählen Sie eine CSV-Datei aus!
 BANKIMPORT_Invalid_account=Das ausgewählte Bankkonto existiert nicht!
+
+BANKIMPORT_Permission_Import=Bankauszüge importieren
+BANKIMPORT_Menu_Title=Kontoauszüge importieren
