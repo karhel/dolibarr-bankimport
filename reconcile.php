@@ -48,7 +48,7 @@ require_once DOL_DOCUMENT_ROOT.'/fourn/class/paiementfourn.class.php';
 require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.facture.class.php';
 
 // Security check
-if (!$user->hasRight('bankimport', 'reconcile')) {
+if (!$user->hasRight('bankimport', 'import')) {
     accessforbidden();
 }
 
@@ -64,6 +64,8 @@ $action = GETPOST('action', 'alpha');
 $banklineid = GETPOST('banklineid', 'int');
 $invoiceid = GETPOST('invoiceid', 'int');
 $invoice_type = GETPOST('invoice_type', 'alpha');
+$payment_type = GETPOST('payment_type', 'alpha');
+$mark_paid = GETPOST('mark_paid', 'int');
 
 // Handle reconciliation action
 if ($action == 'reconcile' && !empty($banklineid) && !empty($invoiceid)) {
@@ -92,8 +94,13 @@ if ($action == 'reconcile' && !empty($banklineid) && !empty($invoiceid)) {
         $accountid = $obj->fk_account;
         
         // Check if already reconciled
-        if ($obj->fk_type !== 'IMPORT') {
+        if (!($obj->fk_type === null || $obj->fk_type === 'IMPORT')) {
             throw new Exception($langs->trans("BANKIMPORT_Error_AlreadyReconciled"));
+        }
+        
+        // Default payment type if not provided
+        if (empty($payment_type)) {
+            $payment_type = 'VIR'; // VIR (Virement)
         }
         
         if ($invoice_type == 'customer') {
@@ -113,7 +120,7 @@ if ($action == 'reconcile' && !empty($banklineid) && !empty($invoiceid)) {
             $payment = new Paiement($db);
             $payment->datepaye = $datepaye;
             $payment->amounts = array($invoiceid => $amount);
-            $payment->paiementid = 4; // VIR
+            // $payment->paiementid = $payment_type;
             $payment->num_payment = '';
             $payment->note_private = $langs->trans("BANKIMPORT_Reconcile_AutoNote");
             
@@ -125,8 +132,9 @@ if ($action == 'reconcile' && !empty($banklineid) && !empty($invoiceid)) {
             
             // Update the bank line to link to payment
             $sql3 = "UPDATE ".MAIN_DB_PREFIX."bank SET";
-            $sql3 .= " fk_type = 'payment'";
+            $sql3 .= " fk_type = '$payment_type'";
             $sql3 .= ", fk_bordereau = ".((int) $payment_id);
+            $sql3 .= ", label = '(CustomerInvoicePayment)'";
             $sql3 .= " WHERE rowid = ".((int) $banklineid);
             
             $resql3 = $db->query($sql3);
@@ -140,6 +148,23 @@ if ($action == 'reconcile' && !empty($banklineid) && !empty($invoiceid)) {
             $sql4 .= " WHERE rowid = ".((int) $payment_id);
             
             $db->query($sql4);
+            
+            // Mark invoice as paid if requested and fully paid
+            if ($mark_paid) {
+                // Recalculate remaining amount
+                $invoice->fetch($invoiceid);
+                $totalpaid = $invoice->getSommePaiement();
+                $totalcreditnotes = $invoice->getSumCreditNotesUsed();
+                $totaldeposits = $invoice->getSumDepositsUsed();
+                $remains = price2num($invoice->total_ttc - $totalpaid - $totalcreditnotes - $totaldeposits, 'MT');
+                
+                if ($remains <= 0) {
+                    $result = $invoice->setPaid($user);
+                    if ($result < 0) {
+                        throw new Exception($invoice->error);
+                    }
+                }
+            }
             
         } else {
             // Supplier invoice payment
@@ -158,7 +183,7 @@ if ($action == 'reconcile' && !empty($banklineid) && !empty($invoiceid)) {
             $payment = new PaiementFourn($db);
             $payment->datepaye = $datepaye;
             $payment->amounts = array($invoiceid => $amount);
-            $payment->paiementid = 4; // VIR
+            $payment->paiementid = $payment_type;
             $payment->num_payment = '';
             $payment->note_private = $langs->trans("BANKIMPORT_Reconcile_AutoNote");
             
@@ -185,6 +210,23 @@ if ($action == 'reconcile' && !empty($banklineid) && !empty($invoiceid)) {
             $sql4 .= " WHERE rowid = ".((int) $payment_id);
             
             $db->query($sql4);
+            
+            // Mark invoice as paid if requested and fully paid
+            if ($mark_paid) {
+                // Recalculate remaining amount
+                $invoice->fetch($invoiceid);
+                $totalpaid = $invoice->getSommePaiement();
+                $totalcreditnotes = $invoice->getSumCreditNotesUsed();
+                $totaldeposits = $invoice->getSumDepositsUsed();
+                $remains = price2num($invoice->total_ttc - $totalpaid - $totalcreditnotes - $totaldeposits, 'MT');
+                
+                if ($remains <= 0) {
+                    $result = $invoice->setPaid($user);
+                    if ($result < 0) {
+                        throw new Exception($invoice->error);
+                    }
+                }
+            }
         }
         
         $db->commit();
@@ -239,7 +281,7 @@ if (!empty($accountid)) {
     $sql = "SELECT b.rowid, b.dateo, b.label, b.amount";
     $sql .= " FROM ".MAIN_DB_PREFIX."bank as b";
     $sql .= " WHERE b.fk_account = ".((int) $accountid);
-    $sql .= " AND b.fk_type = 'IMPORT'";
+    $sql .= " AND (b.fk_type IS NULL OR b.fk_type = 'IMPORT')";
     $sql .= " AND b.amount != 0";
     $sql .= " ORDER BY b.dateo DESC, b.rowid DESC";
     $sql .= " LIMIT 100";
@@ -273,16 +315,35 @@ if (!empty($accountid)) {
     print '</table>';
 }
 
+// Get payment types for dropdown
+$sql = "SELECT id, code, libelle FROM ".MAIN_DB_PREFIX."c_paiement";
+$sql .= " WHERE entity IN (".getEntity('c_paiement').")";
+$sql .= " AND active = 1";
+$sql .= " ORDER BY libelle";
+$resql = $db->query($sql);
+$payment_types = array();
+if ($resql) {
+    while ($obj = $db->fetch_object($resql)) {
+        $payment_types[] = array(
+            'id' => $obj->id,
+            'code' => $obj->code,
+            'label' => $obj->libelle
+        );
+    }
+}
+
 // Modal for invoice selection
 print '
 <div id="reconcileModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.4);">
-    <div style="background-color:#fefefe; margin:5% auto; padding:20px; border:1px solid #888; width:80%; max-width:800px; border-radius:8px; max-height:80vh; overflow-y:auto;">
+    <div style="background-color:#fefefe; margin:3% auto; padding:20px; border:1px solid #888; width:85%; max-width:900px; border-radius:8px; max-height:85vh; overflow-y:auto;">
         <span onclick="closeReconcileModal()" style="color:#aaa; float:right; font-size:28px; font-weight:bold; cursor:pointer;">&times;</span>
         <h3>'.$langs->trans("BANKIMPORT_Reconcile_SelectInvoice").'</h3>
         
         <div id="modalContent">
-            <p><strong>'.$langs->trans("BANKIMPORT_Reconcile_BankLine").':</strong> <span id="modalBankLabel"></span></p>
-            <p><strong>'.$langs->trans("BANKIMPORT_Reconcile_Amount").':</strong> <span id="modalBankAmount"></span></p>
+            <div style="background-color:#f5f5f5; padding:10px; margin-bottom:15px; border-radius:4px;">
+                <p style="margin:5px 0;"><strong>'.$langs->trans("BANKIMPORT_Reconcile_BankLine").':</strong> <span id="modalBankLabel"></span></p>
+                <p style="margin:5px 0;"><strong>'.$langs->trans("BANKIMPORT_Reconcile_Amount").':</strong> <span id="modalBankAmount"></span></p>
+            </div>
             
             <form id="reconcileForm" action="'.$_SERVER["PHP_SELF"].'?accountid='.$accountid.'" method="post">
                 <input type="hidden" name="token" value="'.newToken().'">
@@ -291,24 +352,56 @@ print '
                 <input type="hidden" name="accountid" value="'.$accountid.'">
                 
                 <table class="noborder centpercent">
+                    <tr class="liste_titre">
+                        <td colspan="2">'.$langs->trans("BANKIMPORT_Reconcile_PaymentSettings").'</td>
+                    </tr>
                     <tr>
-                        <td>'.$langs->trans("BANKIMPORT_Reconcile_InvoiceType").'</td>
+                        <td style="width:30%;">'.$langs->trans("BANKIMPORT_Reconcile_InvoiceType").'</td>
                         <td>
-                            <select name="invoice_type" id="invoiceType" onchange="searchInvoices()">
+                            <select name="invoice_type" id="invoiceType" onchange="searchInvoices()" style="min-width:200px;">
                                 <option value="customer">'.$langs->trans("BANKIMPORT_Reconcile_CustomerInvoice").'</option>
                                 <option value="supplier">'.$langs->trans("BANKIMPORT_Reconcile_SupplierInvoice").'</option>
                             </select>
                         </td>
                     </tr>
                     <tr>
-                        <td>'.$langs->trans("BANKIMPORT_Reconcile_SearchInvoice").'</td>
+                        <td>'.$langs->trans("BANKIMPORT_Reconcile_PaymentType").'</td>
                         <td>
-                            <input type="text" id="invoiceSearch" placeholder="'.$langs->trans("BANKIMPORT_Reconcile_SearchPlaceholder").'" style="width:100%;">
+                            <select name="payment_type" id="paymentType" style="min-width:200px;">
+';
+
+foreach ($payment_types as $pt) {
+    $selected = ($pt['code'] == 'VIR') ? 'selected' : '';
+    print '<option value="'.$pt['code'].'" '.$selected.'>'.$langs->trans("PaymentType".dol_escape_htmltag($pt['code'])).'</option>';
+}
+
+print '
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>'.$langs->trans("BANKIMPORT_Reconcile_MarkPaid").'</td>
+                        <td>
+                            <input type="checkbox" name="mark_paid" id="markPaid" value="1" checked>
+                            <label for="markPaid">'.$langs->trans("BANKIMPORT_Reconcile_MarkPaidLabel").'</label>
+                        </td>
+                    </tr>
+                </table>
+                
+                <br>
+                
+                <table class="noborder centpercent">
+                    <tr class="liste_titre">
+                        <td colspan="2">'.$langs->trans("BANKIMPORT_Reconcile_SelectInvoice").'</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <input type="text" id="invoiceSearch" placeholder="'.$langs->trans("BANKIMPORT_Reconcile_SearchPlaceholder").'" style="width:100%; padding:8px; margin-bottom:10px;">
                         </td>
                     </tr>
                     <tr>
                         <td colspan="2">
-                            <div style="max-height:300px; overflow-y:auto; border:1px solid #ccc; padding:10px;">
+                            <div style="max-height:350px; overflow-y:auto; border:1px solid #ccc; padding:10px; background-color:#fff;">
                                 <div id="invoiceList"></div>
                             </div>
                         </td>
@@ -335,11 +428,21 @@ function openReconcileModal(banklineid, label, amount) {
     document.getElementById("modalBankLabel").textContent = label;
     document.getElementById("modalBankAmount").textContent = amount.toFixed(2) + " €";
     document.getElementById("reconcileModal").style.display = "block";
+    
+    // Auto-select invoice type based on amount sign
+    if (amount > 0) {
+        document.getElementById("invoiceType").value = "customer";
+    } else {
+        document.getElementById("invoiceType").value = "supplier";
+    }
+    
     searchInvoices();
 }
 
 function closeReconcileModal() {
     document.getElementById("reconcileModal").style.display = "none";
+    document.getElementById("selectedInvoiceId").value = "";
+    document.getElementById("confirmButton").disabled = true;
 }
 
 function searchInvoices() {
@@ -353,17 +456,37 @@ function searchInvoices() {
             list.innerHTML = "";
             
             if (data.length === 0) {
-                list.innerHTML = "<p class=\'opacitymedium\'>'.$langs->trans("BANKIMPORT_Reconcile_NoInvoices").'</p>";
+                list.innerHTML = "<p class=\'opacitymedium\' style=\'text-align:center; padding:20px;\'>'.$langs->trans("BANKIMPORT_Reconcile_NoInvoices").'</p>";
                 return;
             }
             
             data.forEach(function(invoice) {
                 var div = document.createElement("div");
                 div.className = "invoice-item";
-                div.style.cssText = "padding:10px; margin:5px 0; border:1px solid #ddd; cursor:pointer; border-radius:4px;";
-                div.innerHTML = "<strong>" + invoice.ref + "</strong><br>" + 
-                               invoice.thirdparty + "<br>" + 
-                               "<span style=\'color:#666;\'>Montant: " + invoice.amount + " € - " + invoice.status + "</span>";
+                div.style.cssText = "padding:12px; margin:8px 0; border:2px solid #ddd; cursor:pointer; border-radius:6px; transition: all 0.3s;";
+                div.innerHTML = "<div style=\'display:flex; justify-content:space-between; align-items:center;\'>" +
+                               "<div>" +
+                               "<strong style=\'font-size:1.1em;\'>" + invoice.ref + "</strong><br>" + 
+                               "<span style=\'color:#666;\'>" + invoice.thirdparty + "</span><br>" + 
+                               "<span style=\'color:#999; font-size:0.9em;\'>" + invoice.status + "</span>" +
+                               "</div>" +
+                               "<div style=\'text-align:right;\'>" +
+                               "<strong style=\'font-size:1.2em; color:#4CAF50;\'>" + invoice.amount + " €</strong><br>" +
+                               "<span style=\'font-size:0.9em; color:#666;\'>' . $langs->trans("BANKIMPORT_Reconcile_RemainingToPay") . '</span>" +
+                               "</div>" +
+                               "</div>";
+                
+                div.onmouseover = function() {
+                    if (this.style.backgroundColor !== "rgb(232, 245, 233)") {
+                        this.style.backgroundColor = "#f5f5f5";
+                    }
+                };
+                
+                div.onmouseout = function() {
+                    if (this.style.backgroundColor !== "rgb(232, 245, 233)") {
+                        this.style.backgroundColor = "";
+                    }
+                };
                 
                 div.onclick = function() {
                     // Remove selection from all items
@@ -371,10 +494,12 @@ function searchInvoices() {
                     for (var i = 0; i < items.length; i++) {
                         items[i].style.backgroundColor = "";
                         items[i].style.borderColor = "#ddd";
+                        items[i].style.borderWidth = "2px";
                     }
                     // Select this item
                     div.style.backgroundColor = "#e8f5e9";
                     div.style.borderColor = "#4CAF50";
+                    div.style.borderWidth = "2px";
                     document.getElementById("selectedInvoiceId").value = invoice.id;
                     document.getElementById("confirmButton").disabled = false;
                 };
@@ -384,7 +509,7 @@ function searchInvoices() {
         })
         .catch(error => {
             console.error("Error:", error);
-            document.getElementById("invoiceList").innerHTML = "<p class=\'error\'>Erreur de chargement</p>";
+            document.getElementById("invoiceList").innerHTML = "<p class=\'error\' style=\'text-align:center; padding:20px; color:red;\'>Erreur de chargement</p>";
         });
 }
 

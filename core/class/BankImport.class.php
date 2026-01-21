@@ -378,8 +378,8 @@ class BankImport extends CommonObject
         $debit = $this->parseAmount($data[$mapping['debit']]);
         $credit = $this->parseAmount($data[$mapping['credit']]);
         
-        if ($debit > 0) {
-            $amount = -$debit; // Debit is negative
+        if ($debit < 0) {
+            $amount = $debit; // Debit is negative
         } else {
             $amount = $credit; // Credit is positive
         }
