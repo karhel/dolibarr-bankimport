@@ -56,9 +56,6 @@ require_once DOL_DOCUMENT_ROOT.'/core/lib/admin.lib.php';
 require_once __DIR__ . '/core/class/BankImport.class.php';
 
 // Security check - check for bankimport rights
-$strRightName = $langs->trans("BANKIMPORT_Title");
-
-
 if (!$user->hasRight('bankimport', 'import')) {
     accessforbidden();
 }
