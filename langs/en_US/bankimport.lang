@@ -47,3 +47,17 @@ BANKIMPORT_Invalid_account=The selected bank account does not exist!
 
 BANKIMPORT_Permission_Import=Import bank statements
 BANKIMPORT_Menu_Title=Import bank statements
+
+BANKIMPORT_Format=CSV Format
+BANKIMPORT_Format_Auto=Auto-detect
+BANKIMPORT_Format_Simple=Simple format (Date, Debit, Credit, Label)
+BANKIMPORT_Format_Camt052=camt.052 v8 format (Haspa)
+BANKIMPORT_Format_Help=Auto-detection analyzes the file header
+BANKIMPORT_Separator=CSV Separator
+BANKIMPORT_Separator_Semicolon=Semicolon (;)
+BANKIMPORT_Separator_Comma=Comma (,)
+BANKIMPORT_Separator_Tab=Tab
+BANKIMPORT_Format_Simple_Title=Simple format
+BANKIMPORT_Format_Simple_Description=Format with columns: Date, Value date, Debit, Credit, Label, Balance
+BANKIMPORT_Format_Camt052_Title=camt.052 v8 format
+BANKIMPORT_Format_Camt052_Description=German standard bank format with 16+ columns

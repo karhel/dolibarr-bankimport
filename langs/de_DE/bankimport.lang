@@ -47,3 +47,17 @@ BANKIMPORT_Invalid_account=Das ausgewählte Bankkonto existiert nicht!
 
 BANKIMPORT_Permission_Import=Bankauszüge importieren
 BANKIMPORT_Menu_Title=Kontoauszüge importieren
+
+BANKIMPORT_Format=CSV-Format
+BANKIMPORT_Format_Auto=Automatische Erkennung
+BANKIMPORT_Format_Simple=Einfaches Format (Datum, Soll, Haben, Verwendungszweck)
+BANKIMPORT_Format_Camt052=Format camt.052 v8 (Haspa)
+BANKIMPORT_Format_Help=Die automatische Erkennung analysiert die Kopfzeile der Datei
+BANKIMPORT_Separator=CSV-Trennzeichen
+BANKIMPORT_Separator_Semicolon=Semikolon (;)
+BANKIMPORT_Separator_Comma=Komma (,)
+BANKIMPORT_Separator_Tab=Tabulator
+BANKIMPORT_Format_Simple_Title=Einfaches Format
+BANKIMPORT_Format_Simple_Description=Format mit Spalten: Datum, Valutadatum, Soll, Haben, Verwendungszweck, Saldo
+BANKIMPORT_Format_Camt052_Title=Format camt.052 v8
+BANKIMPORT_Format_Camt052_Description=Deutsches Standard-Bankenformat mit 16+ Spalten

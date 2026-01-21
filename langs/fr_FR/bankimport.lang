@@ -46,3 +46,17 @@ BANKIMPORT_Invalid_account=Le compte bancaire sélectionné n'existe pas !
 
 BANKIMPORT_Permission_Import=Importer des relevés bancaires
 BANKIMPORT_Menu_Title=Importer des relevés bancaires
+
+BANKIMPORT_Format=Format CSV
+BANKIMPORT_Format_Auto=Détection automatique
+BANKIMPORT_Format_Simple=Format simple (Date, Débit, Crédit, Libellé)
+BANKIMPORT_Format_Camt052=Format camt.052 v8 (Haspa)
+BANKIMPORT_Format_Help=La détection automatique analyse l'en-tête du fichier
+BANKIMPORT_Separator=Séparateur CSV
+BANKIMPORT_Separator_Semicolon=Point-virgule (;)
+BANKIMPORT_Separator_Comma=Virgule (,)
+BANKIMPORT_Separator_Tab=Tabulation
+BANKIMPORT_Format_Simple_Title=Format simple
+BANKIMPORT_Format_Simple_Description=Format avec colonnes : Date, Date de valeur, Débit, Crédit, Libellé, Solde
+BANKIMPORT_Format_Camt052_Title=Format camt.052 v8
+BANKIMPORT_Format_Camt052_Description=Format standard bancaire allemand avec 16+ colonnes

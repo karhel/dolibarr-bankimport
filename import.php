@@ -68,7 +68,9 @@ print load_fiche_titre($langs->trans("BANKIMPORT_Title"));
 
 // Get parameters
 $accountid = GETPOST('accountid', 'int');
-$encoding = GETPOST('encoding', 'alpha'); // UTF-8 oder ISO-8859-1
+$encoding = GETPOST('encoding', 'alpha'); // UTF-8 ou ISO-8859-1
+$format = GETPOST('format', 'alpha'); // simple or camt052
+$separator = GETPOST('separator', 'alpha'); // CSV separator
 $action = GETPOST('action', 'alpha');
 
 // Token validation is handled by Dolibarr automatically
@@ -107,6 +109,8 @@ if ($action == 'upload') {
         // All validations passed, proceed with import
         $bankImport->setAccountId($accountid);
         $bankImport->setEncoding($encoding);
+        $bankImport->setFormat($format);
+        $bankImport->setSeparator($separator ? $separator : ';');
 
         // Validate file
         if (!$bankImport->validateFile($_FILES['statement'])) {
@@ -161,14 +165,51 @@ print '<input type="file" name="statement" accept=".csv,text/csv,text/plain" req
 print '</td>';
 print '</tr>';
 
+// Format selection
+print '<tr class="oddeven">';
+print '<td>'.$langs->trans("BANKIMPORT_Format").'</td>';
+print '<td>';
+print '<select name="format" id="formatSelect">';
+$formats = array(
+    'auto' => $langs->trans("BANKIMPORT_Format_Auto"),
+    'simple' => $langs->trans("BANKIMPORT_Format_Simple"),
+    'camt052' => $langs->trans("BANKIMPORT_Format_Camt052")
+);
+foreach ($formats as $key => $label) {
+    $selected = ($format == $key || ($format == '' && $key == 'auto')) ? 'selected' : '';
+    print '<option value="'.$key.'" '.$selected.'>'.$label.'</option>';
+}
+print '</select>';
+print ' <span class="opacitymedium">'.$langs->trans("BANKIMPORT_Format_Help").'</span>';
+print '</td>';
+print '</tr>';
+
+// CSV Separator selection
+print '<tr class="oddeven">';
+print '<td>'.$langs->trans("BANKIMPORT_Separator").'</td>';
+print '<td>';
+print '<select name="separator">';
+$separators = array(
+    ';' => $langs->trans("BANKIMPORT_Separator_Semicolon"),
+    ',' => $langs->trans("BANKIMPORT_Separator_Comma"),
+    "\t" => $langs->trans("BANKIMPORT_Separator_Tab")
+);
+foreach ($separators as $key => $label) {
+    $selected = ($separator == $key || ($separator == '' && $key == ';')) ? 'selected' : '';
+    print '<option value="'.htmlspecialchars($key).'" '.$selected.'>'.$label.'</option>';
+}
+print '</select>';
+print '</td>';
+print '</tr>';
+
 // Encoding selection
 print '<tr class="oddeven">';
 print '<td>'.$langs->trans("BANKIMPORT_Encoding").'</td>';
 print '<td>';
 print '<select name="encoding">';
-$encodings = array('ISO-8859-1' => 'ISO-8859-1', 'UTF-8' => 'UTF-8');
+$encodings = array('UTF-8' => 'UTF-8', 'ISO-8859-1' => 'ISO-8859-1');
 foreach ($encodings as $key => $label) {
-    $selected = ($encoding == $key) ? 'selected' : '';
+    $selected = ($encoding == $key || ($encoding == '' && $key == 'UTF-8')) ? 'selected' : '';
     print '<option value="'.$key.'" '.$selected.'>'.$label.'</option>';
 }
 print '</select>';
@@ -238,8 +279,16 @@ print '<br>';
 print '<div class="info">';
 print '<strong>'.$langs->trans("BANKIMPORT_Help_Title").'</strong><br>';
 print $langs->trans("BANKIMPORT_Help_Description").'<br><br>';
+
 print '<strong>'.$langs->trans("BANKIMPORT_Help_Format").'</strong><br>';
-print $langs->trans("BANKIMPORT_Help_Format_Details");
+print $langs->trans("BANKIMPORT_Help_Format_Details").'<br><br>';
+
+print '<strong>'.$langs->trans("BANKIMPORT_Format_Simple_Title").'</strong><br>';
+print $langs->trans("BANKIMPORT_Format_Simple_Description").'<br>';
+print '<code>Date; Date de valeur; Débit; Crédit; Libellé; Solde</code><br><br>';
+
+print '<strong>'.$langs->trans("BANKIMPORT_Format_Camt052_Title").'</strong><br>';
+print $langs->trans("BANKIMPORT_Format_Camt052_Description");
 print '</div>';
 
 llxFooter();
