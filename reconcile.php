@@ -148,6 +148,25 @@ if ($action == 'reconcile' && !empty($banklineid) && !empty($invoiceid)) {
             $sql4 .= " WHERE rowid = ".((int) $payment_id);
             
             $db->query($sql4);
+
+            // Create bank_url entries for proper display in bank account
+            // Link 1: Bank line -> Payment
+            $sql5 = "INSERT INTO ".MAIN_DB_PREFIX."bank_url (fk_bank, url_id, url, type)";
+            $sql5 .= " VALUES (".((int) $banklineid).", ".((int) $payment_id).", '";
+            $sql5 .= $payment_id."', 'payment')";
+            $db->query($sql5);
+            
+            // Link 2: Bank line -> Invoice
+            $sql6 = "INSERT INTO ".MAIN_DB_PREFIX."bank_url (fk_bank, url_id, url, type)";
+            $sql6 .= " VALUES (".((int) $banklineid).", ".((int) $invoiceid).", '";
+            $sql6 .= $invoice->ref."', 'company')";
+            $db->query($sql6);
+            
+            // Link 3: Bank line -> Third party (company)
+            $sql7 = "INSERT INTO ".MAIN_DB_PREFIX."bank_url (fk_bank, url_id, url, type)";
+            $sql7 .= " VALUES (".((int) $banklineid).", ".((int) $invoice->socid).", '";
+            $sql7 .= $invoice->thirdparty->name."', 'company')";
+            $db->query($sql7);
             
             // Mark invoice as paid if requested and fully paid
             if ($mark_paid) {
@@ -210,6 +229,25 @@ if ($action == 'reconcile' && !empty($banklineid) && !empty($invoiceid)) {
             $sql4 .= " WHERE rowid = ".((int) $payment_id);
             
             $db->query($sql4);
+
+            // Create bank_url entries for proper display in bank account
+            // Link 1: Bank line -> Supplier Payment
+            $sql5 = "INSERT INTO ".MAIN_DB_PREFIX."bank_url (fk_bank, url_id, url, type)";
+            $sql5 .= " VALUES (".((int) $banklineid).", ".((int) $payment_id).", '";
+            $sql5 .= $payment_id."', 'payment_supplier')";
+            $db->query($sql5);
+            
+            // Link 2: Bank line -> Supplier Invoice
+            $sql6 = "INSERT INTO ".MAIN_DB_PREFIX."bank_url (fk_bank, url_id, url, type)";
+            $sql6 .= " VALUES (".((int) $banklineid).", ".((int) $invoiceid).", '";
+            $sql6 .= $invoice->ref."', 'company')";
+            $db->query($sql6);
+            
+            // Link 3: Bank line -> Third party (supplier)
+            $sql7 = "INSERT INTO ".MAIN_DB_PREFIX."bank_url (fk_bank, url_id, url, type)";
+            $sql7 .= " VALUES (".((int) $banklineid).", ".((int) $invoice->socid).", '";
+            $sql7 .= $invoice->thirdparty->name."', 'company')";
+            $db->query($sql7);
             
             // Mark invoice as paid if requested and fully paid
             if ($mark_paid) {
