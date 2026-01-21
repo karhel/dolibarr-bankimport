@@ -49,7 +49,7 @@ class modBankImport extends DolibarrModules
         $this->rights[$r][1] = 'Bankauszüge importieren';
         $this->rights[$r][2] = 'w';
         $this->rights[$r][3] = 0;
-        $this->rights[$r][4] = 'modifier';
+        $this->rights[$r][4] = 'import';
         $r++;
 
         // --- Menu definition ---
