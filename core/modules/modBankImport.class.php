@@ -48,15 +48,24 @@ class modBankImport extends DolibarrModules
 
         // --- Permissions definition ---
         $r = 0;
+
         $this->rights[$r][0] = $this->numero + $r;
         // Use translation for permission description
         $this->rights[$r][1] = $langs->trans('BANKIMPORT_Permission_Import');
         $this->rights[$r][3] = 1;
         $this->rights[$r][4] = 'import';
+        
         $r++;
+
+        $this->rights[$r][0] = $this->numero + $r;
+        // Use translation for permission description
+        $this->rights[$r][1] = $langs->trans('BANKIMPORT_Permission_Reconcile');
+        $this->rights[$r][3] = 1;
+        $this->rights[$r][4] = 'reconcile';
 
         // --- Menu definition ---
         $r = 0;
+        
         $this->menu[$r++] = array(
             'fk_menu'   => 'fk_mainmenu=bank',
             'type'      => 'left',
@@ -67,6 +76,22 @@ class modBankImport extends DolibarrModules
             'url'       => '/custom/bankimport/import.php',
             'langs'     => 'bankimport@bankimport',
             'position'  => 100,
+            'enabled'   => '1',
+            'perms'     => '1',
+            'target'    => '',
+            'user'      => 0
+        );
+
+        // Menu 2: Reconcile
+        $this->menu[$r++] = array(
+            'fk_menu'   => 'fk_mainmenu=bank',
+            'type'      => 'left',
+            'titre'     => $langs->trans('BANKIMPORT_Reconcile_Title'),
+            'mainmenu'  => 'bank',
+            'leftmenu'  => 'bankimport_reconcile',
+            'url'       => '/custom/bankimport/reconcile.php',
+            'langs'     => 'bankimport@bankimport',
+            'position'  => 101,
             'enabled'   => '1',
             'perms'     => '1',
             'target'    => '',

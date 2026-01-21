@@ -27,6 +27,16 @@
         "write": "1",
         "delete": "0"
       }
+    },
+    {
+      "id": 104002,
+      "desc": "Reconcile bank statements",
+      "default": 0,
+      "perm": {
+        "read": "1",
+        "write": "1",
+        "delete": "0"
+      }
     }
   ],
   "menus": [

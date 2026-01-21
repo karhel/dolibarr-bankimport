@@ -384,7 +384,7 @@ class BankImport extends CommonObject
             $amount = $credit; // Credit is positive
         }
 
-        $oper = ($amount < 0) ? 'PRE' : 'VIR'; // PRE for debit, VIR for credit
+        $oper = 'IMPORT'; //($amount < 0) ? 'PRE' : 'VIR'; // PRE for debit, VIR for credit
         $ref = '';
         $categorie = null;
         $transaction_id = null;
@@ -402,10 +402,10 @@ class BankImport extends CommonObject
 
         // Prepare notes
         $note = '';
-        if (!empty($data[$mapping['balance']])) {
+        /*if (!empty($data[$mapping['balance']])) {
             $balance = $this->parseAmount($data[$mapping['balance']]);
             $note = 'Solde: ' . number_format($balance, 2, ',', ' ');
-        }
+        }*/
 
         // Begin transaction
         $this->db->begin();
