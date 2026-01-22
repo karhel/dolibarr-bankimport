@@ -49,9 +49,19 @@ class BankImport extends CommonObject
     public $encoding;
 
     /**
-     * @var array CSV field mapping
+     * @var string CSV format type
      */
-    public $fieldMapping = array(
+    public $format;
+
+    /**
+     * @var string CSV separator
+     */
+    public $separator = ';';
+
+    /**
+     * @var array CSV field mapping for camt.052 format
+     */
+    public $fieldMappingCamt = array(
         'account' => 0,
         'booking_date' => 1,
         'value_date' => 2,
@@ -69,6 +79,19 @@ class BankImport extends CommonObject
     );
 
     /**
+     * @var array CSV field mapping for simple format
+     * Format: Date, Date de valeur, Débit, Crédit, Libellé, Solde
+     */
+    public $fieldMappingSimple = array(
+        'date' => 0,              // Date
+        'value_date' => 1,        // Date de valeur
+        'debit' => 2,             // Débit
+        'credit' => 3,            // Crédit
+        'label' => 4,             // Libellé
+        'balance' => 5            // Solde
+    );
+
+    /**
      * Constructor
      *
      * @param DoliDB $db Database handler
@@ -76,6 +99,7 @@ class BankImport extends CommonObject
     public function __construct($db)
     {
         $this->db = $db;
+        $this->format = 'simple'; // Default format
     }
 
     /**
@@ -101,6 +125,28 @@ class BankImport extends CommonObject
     }
 
     /**
+     * Set format
+     *
+     * @param string $format CSV format (simple or camt052)
+     * @return void
+     */
+    public function setFormat($format)
+    {
+        $this->format = $format;
+    }
+
+    /**
+     * Set CSV separator
+     *
+     * @param string $separator CSV separator
+     * @return void
+     */
+    public function setSeparator($separator)
+    {
+        $this->separator = $separator;
+    }
+
+    /**
      * Validate uploaded file
      *
      * @param array $file $_FILES array element
@@ -123,13 +169,61 @@ class BankImport extends CommonObject
             return false;
         }
 
-        $allowedTypes = array('text/csv', 'text/plain', 'application/csv');
+        $allowedTypes = array('text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel');
         if (!in_array($file['type'], $allowedTypes) && !preg_match('/\.csv$/i', $file['name'])) {
             $this->error = 'Invalid file type (CSV required)';
             return false;
         }
 
         return true;
+    }
+
+    /**
+     * Detect CSV format from header
+     *
+     * @param string $filename File path
+     * @return string Format type (simple or camt052)
+     */
+    public function detectFormat($filename)
+    {
+        $handle = fopen($filename, 'r');
+        if (!$handle) {
+            return 'simple';
+        }
+
+        $header = fgetcsv($handle, 0, $this->separator);
+        fclose($handle);
+
+        if (!$header) {
+            return 'simple';
+        }
+
+        // Convert encoding if needed
+        $header = $this->convertEncoding($header);
+
+        // Check for simple format headers
+        $simpleHeaders = array('Date', 'Date de valeur', 'Débit', 'Crédit', 'Libellé', 'Solde');
+        $matches = 0;
+        foreach ($simpleHeaders as $expectedHeader) {
+            foreach ($header as $col) {
+                if (stripos($col, $expectedHeader) !== false || stripos($expectedHeader, $col) !== false) {
+                    $matches++;
+                    break;
+                }
+            }
+        }
+
+        // If we found most of the simple format headers, use simple format
+        if ($matches >= 4) {
+            return 'simple';
+        }
+
+        // Check for camt.052 format (has more columns)
+        if (count($header) >= 15) {
+            return 'camt052';
+        }
+
+        return 'simple';
     }
 
     /**
@@ -153,6 +247,11 @@ class BankImport extends CommonObject
             return $result;
         }
 
+        // Auto-detect format if not set
+        if (empty($this->format) || $this->format == 'auto') {
+            $this->format = $this->detectFormat($filename);
+        }
+
         $handle = fopen($filename, 'r');
         if (!$handle) {
             $this->error = 'Could not open file';
@@ -160,7 +259,7 @@ class BankImport extends CommonObject
         }
 
         $row = 0;
-        while (($data = fgetcsv($handle, 0, ";")) !== FALSE) {
+        while (($data = fgetcsv($handle, 0, $this->separator)) !== FALSE) {
             $row++;
             if ($row == 1) continue; // Skip header
 
@@ -173,8 +272,13 @@ class BankImport extends CommonObject
                 continue;
             }
 
-            // Process row
-            $importResult = $this->processRow($data, $row);
+            // Process row based on format
+            if ($this->format == 'simple') {
+                $importResult = $this->processRowSimple($data, $row);
+            } else {
+                $importResult = $this->processRowCamt($data, $row);
+            }
+
             if ($importResult === true) {
                 $result['success']++;
             } elseif ($importResult === 'skipped') {
@@ -213,48 +317,80 @@ class BankImport extends CommonObject
      */
     private function validateRow($data, $row)
     {
-        if (count($data) < 15) {
-            $this->error = 'Insufficient columns in CSV';
-            return false;
-        }
+        if ($this->format == 'simple') {
+            // Simple format needs at least 6 columns
+            if (count($data) < 6) {
+                $this->error = 'Insufficient columns in CSV (expected 6: Date, Date de valeur, Débit, Crédit, Libellé, Solde)';
+                return false;
+            }
 
-        // Validate required fields
-        if (empty($data[$this->fieldMapping['booking_date']])) {
-            $this->error = 'Missing booking date';
-            return false;
-        }
+            // Validate required fields
+            if (empty($data[$this->fieldMappingSimple['date']])) {
+                $this->error = 'Missing date';
+                return false;
+            }
 
-        if (empty($data[$this->fieldMapping['amount']])) {
-            $this->error = 'Missing amount';
-            return false;
+            // At least one of debit or credit must have a value
+            if (empty($data[$this->fieldMappingSimple['debit']]) && empty($data[$this->fieldMappingSimple['credit']])) {
+                $this->error = 'Missing amount (both debit and credit are empty)';
+                return false;
+            }
+        } else {
+            // camt.052 format needs at least 15 columns
+            if (count($data) < 15) {
+                $this->error = 'Insufficient columns in CSV';
+                return false;
+            }
+
+            if (empty($data[$this->fieldMappingCamt['booking_date']])) {
+                $this->error = 'Missing booking date';
+                return false;
+            }
+
+            if (empty($data[$this->fieldMappingCamt['amount']])) {
+                $this->error = 'Missing amount';
+                return false;
+            }
         }
 
         return true;
     }
 
     /**
-     * Process single CSV row
+     * Process single CSV row (simple format)
      *
      * @param array $data Row data
      * @param int $row Row number
      * @return bool|string True on success, 'skipped' if already imported, error message on failure
      */
-    private function processRow($data, $row)
+    private function processRowSimple($data, $row)
     {
         global $user;
 
+        $mapping = $this->fieldMappingSimple;
+
         // Extract data
-        $dateo = $this->parseDate($data[$this->fieldMapping['booking_date']]);
-        $datev = $this->parseDate($data[$this->fieldMapping['value_date']]);
-        $label = $this->limitString($data[$this->fieldMapping['payment_purpose']]);
-        $amount = price2num($data[$this->fieldMapping['amount']]);
-        $oper = 'VIR';
-        $ref = trim($data[$this->fieldMapping['mandate_reference']]);
+        $dateo = $this->parseDateSimple($data[$mapping['date']]);
+        $datev = !empty($data[$mapping['value_date']]) ? $this->parseDateSimple($data[$mapping['value_date']]) : $dateo;
+        $label = $this->limitString($data[$mapping['label']]);
+        
+        // Calculate amount (debit is negative, credit is positive)
+        $debit = $this->parseAmount($data[$mapping['debit']]);
+        $credit = $this->parseAmount($data[$mapping['credit']]);
+        
+        if ($debit < 0) {
+            $amount = $debit; // Debit is negative
+        } else {
+            $amount = $credit; // Credit is positive
+        }
+
+        $oper = 'IMPORT'; //($amount < 0) ? 'PRE' : 'VIR'; // PRE for debit, VIR for credit
+        $ref = '';
         $categorie = null;
         $transaction_id = null;
-        $bank_other = $data[$this->fieldMapping['counterparty_bic']];
-        $iban_other = $data[$this->fieldMapping['counterparty_iban']];
-        $owner_other = $data[$this->fieldMapping['counterparty_name']];
+        $bank_other = '';
+        $iban_other = '';
+        $owner_other = '';
 
         // Generate import key
         $import_key = $this->generateImportKey($transaction_id, $iban_other, $owner_other, $amount, $label, $ref);
@@ -265,7 +401,11 @@ class BankImport extends CommonObject
         }
 
         // Prepare notes
-        $note = $this->buildNote($data);
+        $note = '';
+        /*if (!empty($data[$mapping['balance']])) {
+            $balance = $this->parseAmount($data[$mapping['balance']]);
+            $note = 'Solde: ' . number_format($balance, 2, ',', ' ');
+        }*/
 
         // Begin transaction
         $this->db->begin();
@@ -307,7 +447,83 @@ class BankImport extends CommonObject
     }
 
     /**
-     * Parse date from DD.MM.YY format
+     * Process single CSV row (camt.052 format)
+     *
+     * @param array $data Row data
+     * @param int $row Row number
+     * @return bool|string True on success, 'skipped' if already imported, error message on failure
+     */
+    private function processRowCamt($data, $row)
+    {
+        global $user;
+
+        $mapping = $this->fieldMappingCamt;
+
+        // Extract data
+        $dateo = $this->parseDate($data[$mapping['booking_date']]);
+        $datev = $this->parseDate($data[$mapping['value_date']]);
+        $label = $this->limitString($data[$mapping['payment_purpose']]);
+        $amount = price2num($data[$mapping['amount']]);
+        $oper = 'VIR';
+        $ref = trim($data[$mapping['mandate_reference']]);
+        $categorie = null;
+        $transaction_id = null;
+        $bank_other = $data[$mapping['counterparty_bic']];
+        $iban_other = $data[$mapping['counterparty_iban']];
+        $owner_other = $data[$mapping['counterparty_name']];
+
+        // Generate import key
+        $import_key = $this->generateImportKey($transaction_id, $iban_other, $owner_other, $amount, $label, $ref);
+
+        // Check if already imported
+        if ($this->isAlreadyImported($import_key)) {
+            return 'skipped';
+        }
+
+        // Prepare notes
+        $note = $this->buildNoteCamt($data);
+
+        // Begin transaction
+        $this->db->begin();
+
+        try {
+            $account = new Account($this->db);
+            $account->fetch($this->accountid);
+
+            $bankline_id = $account->addline(
+                $dateo,
+                $oper,
+                $label,
+                $amount,
+                $ref,
+                $categorie,
+                $user,
+                $owner_other,
+                $bank_other,
+                $iban_other,
+                $datev,
+                null, // num_releve
+                null, // amount_main_currency
+                $note
+            );
+
+            if ($bankline_id > 0) {
+                // Update import key
+                $this->updateImportKey($bankline_id, $import_key);
+                $this->db->commit();
+                return true;
+            } else {
+                $this->db->rollback();
+                return $account->error;
+            }
+        } catch (Exception $e) {
+            $this->db->rollback();
+            return $e->getMessage();
+        }
+    }
+
+    /**
+     * Parse date from DD.MM.YY format (camt.052)
      *
      * @param string $dateString Date string
      * @return int Timestamp
@@ -321,6 +537,77 @@ class BankImport extends CommonObject
             $yyyy = '20' . $yyyy;
         }
         return dol_mktime(0, 0, 0, $mm, $dd, $yyyy);
+    }
+
+    /**
+     * Parse date from multiple formats (simple format)
+     * Supports: DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY, YYYY-MM-DD
+     *
+     * @param string $dateString Date string
+     * @return int Timestamp
+     */
+    private function parseDateSimple($dateString)
+    {
+        $dateString = trim($dateString);
+        
+        // Try different formats
+        // Format: DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
+        if (preg_match('/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/', $dateString, $matches)) {
+            $dd = $matches[1];
+            $mm = $matches[2];
+            $yyyy = $matches[3];
+            return dol_mktime(0, 0, 0, $mm, $dd, $yyyy);
+        }
+        
+        // Format: YYYY-MM-DD
+        if (preg_match('/^(\d{4})\-(\d{1,2})\-(\d{1,2})$/', $dateString, $matches)) {
+            $yyyy = $matches[1];
+            $mm = $matches[2];
+            $dd = $matches[3];
+            return dol_mktime(0, 0, 0, $mm, $dd, $yyyy);
+        }
+        
+        // Format: DD/MM/YY
+        if (preg_match('/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2})$/', $dateString, $matches)) {
+            $dd = $matches[1];
+            $mm = $matches[2];
+            $yyyy = '20' . $matches[3];
+            return dol_mktime(0, 0, 0, $mm, $dd, $yyyy);
+        }
+        
+        // Fallback: use current date
+        return dol_now();
+    }
+
+    /**
+     * Parse amount from string
+     * Handles various formats: 1234.56, 1 234,56, 1.234,56, etc.
+     *
+     * @param string $amountString Amount string
+     * @return float Amount
+     */
+    private function parseAmount($amountString)
+    {
+        if (empty($amountString)) {
+            return 0;
+        }
+        
+        $amountString = trim($amountString);
+        
+        // Remove spaces
+        $amountString = str_replace(' ', '', $amountString);
+        
+        // Replace comma with dot for decimal separator
+        // But first, remove dots if they're used as thousand separators
+        if (preg_match('/\d\.\d{3}/', $amountString)) {
+            // Dots are thousand separators, remove them
+            $amountString = str_replace('.', '', $amountString);
+        }
+        
+        // Now replace comma with dot for decimal
+        $amountString = str_replace(',', '.', $amountString);
+        
+        return (float) $amountString;
     }
 
     /**
@@ -397,26 +684,27 @@ class BankImport extends CommonObject
     }
 
     /**
-     * Build note from CSV data
+     * Build note from CSV data (camt.052 format)
      *
      * @param array $data CSV data
      * @return string Note
      */
-    private function buildNote($data)
+    private function buildNoteCamt($data)
     {
+        $mapping = $this->fieldMappingCamt;
         $note = '';
         $sep = '';
 
-        if (!empty($data[$this->fieldMapping['collector_reference']])) {
-            $note .= $sep . 'Sammlerreferenz=' . $data[$this->fieldMapping['collector_reference']];
+        if (!empty($data[$mapping['collector_reference']])) {
+            $note .= $sep . 'Sammlerreferenz=' . $data[$mapping['collector_reference']];
             $sep = ' ';
         }
 
-        if (!empty($data[$this->fieldMapping['creditor_id']])) {
-            $note .= $sep . 'GlaeubigerId=' . $data[$this->fieldMapping['creditor_id']];
+        if (!empty($data[$mapping['creditor_id']])) {
+            $note .= $sep . 'GlaeubigerId=' . $data[$mapping['creditor_id']];
             $sep = ' ';
         }
 
         return $note;
     }
-} 
+}

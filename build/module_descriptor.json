@@ -1,6 +1,6 @@
 {
   "name": "BankImport",
-  "desc": "Import von Kontoauszügen in die Dolibarr-Bankkonten",
+  "desc": "Import bank statements into Dolibarr bank accounts",
   "version": "{{VERSION}}",
   "family": "financial",
   "picto": "generic",
@@ -20,8 +20,18 @@
   "rights": [
     {
       "id": 104001,
-      "desc": "Bankauszüge importieren",
+      "desc": "Import bank statements",
       "default": "1",
+      "perm": {
+        "read": "1",
+        "write": "1",
+        "delete": "0"
+      }
+    },
+    {
+      "id": 104002,
+      "desc": "Reconcile bank statements",
+      "default": 0,
       "perm": {
         "read": "1",
         "write": "1",
@@ -34,7 +44,7 @@
       "id": "bankimport_menu",
       "fk_menu": "fk_mainmenu=bank",
       "type": "left",
-      "titre": "Kontoauszüge importieren",
+      "titre": "Import bank statements",
       "url": "/custom/bankimport/import.php",
       "langs": "bankimport@bankimport",
       "position": 100,
