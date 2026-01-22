@@ -92,3 +92,19 @@ BANKIMPORT_Reconcile_MarkPaid=Als bezahlt markieren
 BANKIMPORT_Reconcile_MarkPaidLabel=Rechnung automatisch als bezahlt markieren, wenn Restbetrag null ist
 BANKIMPORT_Reconcile_RemainingToPay=Restbetrag
 BANKIMPORT_Permission_Reconcile=Bankzeilen abgleichen
+
+BANKIMPORT_Menu_Main=Importer les relevés
+BANKIMPORT_Menu_Reconcile_Invoices=Rapprochement factures
+BANKIMPORT_Menu_Reconcile_Payments=Rapprochement paiements
+
+BANKIMPORT_Reconcile_Invoices_Title=Rapprochement des factures
+BANKIMPORT_Reconcile_Payments_Title=Rapprochement des charges sociales
+
+BANKIMPORT_Reconcile_ItemType=Type d'élément
+BANKIMPORT_Reconcile_SocialContribution=Charge sociale
+BANKIMPORT_Reconcile_SelectItem=Sélectionner un élément
+BANKIMPORT_Reconcile_SelectSocialContrib=Sélectionner une charge sociale
+BANKIMPORT_Reconcile_NoItems=Aucun élément trouvé
+
+BANKIMPORT_Error_SocialContribNotFound=Charge sociale introuvable
+BANKIMPORT_Error_SocialContribAlreadyPaid=Cette charge sociale est déjà payée

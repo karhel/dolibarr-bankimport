@@ -92,3 +92,19 @@ BANKIMPORT_Reconcile_MarkPaid=Mark as paid
 BANKIMPORT_Reconcile_MarkPaidLabel=Automatically mark invoice as paid if remaining amount is zero
 BANKIMPORT_Reconcile_RemainingToPay=Remaining to pay
 BANKIMPORT_Permission_Reconcile=Reconcile bank entries
+
+BANKIMPORT_Menu_Main=Import statements
+BANKIMPORT_Menu_Reconcile_Invoices=Reconcile invoices
+BANKIMPORT_Menu_Reconcile_Payments=Reconcile payments
+
+BANKIMPORT_Reconcile_Invoices_Title=Invoice reconciliation
+BANKIMPORT_Reconcile_Payments_Title=Social contribution reconciliation
+
+BANKIMPORT_Reconcile_ItemType=Item type
+BANKIMPORT_Reconcile_SocialContribution=Social contribution
+BANKIMPORT_Reconcile_SelectItem=Select an item
+BANKIMPORT_Reconcile_SelectSocialContrib=Select a social contribution
+BANKIMPORT_Reconcile_NoItems=No items found
+
+BANKIMPORT_Error_SocialContribNotFound=Social contribution not found
+BANKIMPORT_Error_SocialContribAlreadyPaid=This social contribution is already paid

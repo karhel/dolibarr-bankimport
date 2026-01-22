@@ -41,7 +41,7 @@
   ],
   "menus": [
     {
-      "id": "bankimport_menu",
+      "id": "bankimport_menu_main",
       "fk_menu": "fk_mainmenu=bank",
       "type": "left",
       "titre": "Import bank statements",

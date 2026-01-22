@@ -37,7 +37,7 @@ if (!$res) {
 }
 
 // Security check
-if (!$user->hasRight('bankimport', 'import')) {
+if (!$user->hasRight('bankimport', 'reconcile')) {
     http_response_code(403);
     echo json_encode(['error' => 'Access denied']);
     exit;

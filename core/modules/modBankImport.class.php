@@ -72,7 +72,7 @@ class modBankImport extends DolibarrModules
             // Use translation for menu title
             'titre'     => $langs->trans('BANKIMPORT_Menu_Title'),
             'mainmenu'  => 'bank',
-            'leftmenu'  => 'bankimport',
+            'leftmenu'  => 'bankimport_main',
             'url'       => '/custom/bankimport/import.php',
             'langs'     => 'bankimport@bankimport',
             'position'  => 100,
@@ -82,16 +82,32 @@ class modBankImport extends DolibarrModules
             'user'      => 0
         );
 
-        // Menu 2: Reconcile
+        // Sub-menu 1: Reconcile Invoices
         $this->menu[$r++] = array(
-            'fk_menu'   => 'fk_mainmenu=bank',
+            'fk_menu'   => 'fk_mainmenu=bank,fk_leftmenu=bankimport_main',
             'type'      => 'left',
-            'titre'     => $langs->trans('BANKIMPORT_Reconcile_Title'),
+            'titre'     => $langs->trans('BANKIMPORT_Menu_Reconcile_Invoices'),
             'mainmenu'  => 'bank',
-            'leftmenu'  => 'bankimport_reconcile',
-            'url'       => '/custom/bankimport/reconcile.php',
+            'leftmenu'  => 'bankimport_reconcile_invoices',
+            'url'       => '/custom/bankimport/reconcile_invoice.php',
             'langs'     => 'bankimport@bankimport',
             'position'  => 101,
+            'enabled'   => '1',
+            'perms'     => '1',
+            'target'    => '',
+            'user'      => 0
+        );
+
+        // Sub-menu 2: Reconcile Paiements
+        $this->menu[$r++] = array(
+            'fk_menu'   => 'fk_mainmenu=bank,fk_leftmenu=bankimport_main',
+            'type'      => 'left',
+            'titre'     => $langs->trans('BANKIMPORT_Menu_Reconcile_Payments'),
+            'mainmenu'  => 'bank',
+            'leftmenu'  => 'bankimport_reconcile_payments',
+            'url'       => '/custom/bankimport/reconcile_paiement.php',
+            'langs'     => 'bankimport@bankimport',
+            'position'  => 102,
             'enabled'   => '1',
             'perms'     => '1',
             'target'    => '',
